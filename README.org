@@ -1,0 +1,263 @@
+:PROPERTIES:
+:GPTEL_MODEL: gpt-3.5-turbo
+:GPTEL_BOUNDS: nil
+:END:
+#+TITLE: Ejercicio práctico para el puesto de SRE
+#+SUBTITLE: 
+#+AUTHOR: Sebastian Godoy Olivares
+#+EMAIL: shackleto@riseup.net
+#+DATE: 
+#+DESCRIPTION: Practico SRE
+#+KEYWORDS: devops, gcp
+#+LANGUAGE: es
+#+OPTIONS: toc:nil num:nil
+#+CATEGORY: devops
+#+TAGS: devops, gcp, cloud, iac
+
+* Objetivo:
+Demostrar de forma práctica el conocimiento de automatización y configuración de
+infraestructura.
+
+** Herramientas a evaluar:
+- Packer
+- Ansible
+- Terraform
+- Terragrunt(opcional)
+
+Utilizando una cuenta gratuita de GCP realizar la automatización del siguiente
+ejercicio
+
+#+begin_export latex
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.2\textwidth]{diagrama.png}
+\caption{Diagrama de arquitectura GCP}
+\label{fig:diagrama_flujo}
+\end{figure}
+#+end_export
+
+Utilizando la VPC y redes por defecto de la cuenta realizar los scripts de
+automatización para los siguientes componentes:
+- Cloud Load Balancer
+- Cloud DNS
+- Bastion
+- GKE Cluster
+- Container Registry
+- Cloud SQL (postgresql)
+
+** Adicional realizar el deploy de una aplicación:
+- Lenguaje Opcional
+- Que consuma algún dato de la base
+
+Deseable pero no requerido, implementar una malla de servicios ISTIO
+
+** Entregable:
+Repositorio Github público con los script, tiempo disponible 24 horas
+
+* Desarrollo
+
+Entiendo que este es un ejercicio práctico para un puesto de Site Reliability Engineering (SRE). Sin embargo, como una inteligencia artificial, no puedo proporcionar directamente una solución en tiempo real. Aunque no puedo ejecutar comandos en tiempo real ni interactuar directamente con servicios cloud, puedo proporcionar una plantilla o guía sobre cómo podrías abordar este problema utilizando las herramientas mencionadas.
+
+Considera los siguientes pasos generales y el código de muestra para cada paso:
+
+** Automatización con Packer y Ansible.
+Estas herramientas se utilizarán para la creación y configuración de la máquina de Bastion.
+
+
+#+begin_src json
+# Packer configuration - bastion.json
+{
+  "builders": [
+    {
+      "type": "googlecompute",
+      "project_id": "{{user `gcp_project_id`}}",
+      "source_image_family": "ubuntu-2004-lts",
+      "ssh_username": "packer",
+      "zone": "{{user `gcp_zone`}}",
+      "instance_name": "bastion-temp",
+      "machine_type": "f1-micro"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "ansible",
+      "playbook_file": "./bastion_playbook.yml"
+    }
+  ]
+}
+#+end_src
+
+
+#+begin_src yaml
+# Ansible playbook - bastion_playbook.yml
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Update all packages
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install necessary packages
+      apt:
+        name: ['package1', 'package2', 'package3']
+        state: present
+#+end_src
+
+Para construir la imagen, ejecutaría el siguiente comando:
+#+begin_src bash
+packer build -var 'gcp_project_id=YOUR_PROJECT_ID' -var 'gcp_zone=YOUR_ZONE' bastion.json
+#+end_src
+
+** Automatización con Terraform.
+Esto se utilizará para configurar los otros componentes de la infraestructura. Aquí hay ejemplos de cómo podrías configurar el Cloud Load Balancer, Cloud DNS, GKE Cluster, Container Registry y Cloud SQL.
+
+#+begin_src terraform
+# main.tf
+provider "google" {
+  project = "YOUR_PROJECT_ID"
+  region  = "YOUR_REGION"
+  zone    = "YOUR_ZONE"
+}
+
+# VPC Network
+resource "google_compute_network" "vpc_network" {
+  name = "my-vpc"
+}
+
+# Cloud Load Balancer
+# First you need to set up an instance group, backend service and health check
+
+resource "google_compute_instance_group" "webservers" {
+  name = "web-instances"
+  # instance configurations...
+}
+
+resource "google_compute_backend_service" "webservers_backend" {
+  name        = "webservers-backend"
+  # other configurations...
+  health_checks = [google_compute_health_check.default.self_link]
+}
+
+resource "google_compute_health_check" "default" {
+  name               = "default"
+  check_interval_sec = 30
+  timeout_sec        = 5
+  healthy_threshold  = 2
+  unhealthy_threshold = 10
+  http_health_check {
+    port = "80"
+  }
+}
+
+# Then you set up the load balancer and its components
+
+resource "google_compute_url_map" "urlmap" {
+  name            = "lb-url-map"
+  default_service = google_compute_backend_service.webservers_backend.self_link
+}
+
+resource "google_compute_target_http_proxy" "http" {
+  name        = "http-lb-proxy"
+  url_map     = google_compute_url_map.urlmap.self_link
+}
+
+resource "google_compute_global_forwarding_rule" "http" {
+  name       = "http-content-rule"
+  target     = google_compute_target_http_proxy.http.self_link
+  port_range = "80"
+}
+
+# Cloud DNS
+resource "google_dns_managed_zone" "dns_zone" {
+  name        = "dns-zone"
+  dns_name    = "mydomain.com."
+  description = "Managed DNS zone for the domain"
+}
+
+# Cloud SQL
+resource "google_sql_database_instance" "master" {
+  name             = "master-instance"
+  database_version = "POSTGRES_13"
+  settings {
+    tier = "db-f1-micro"
+  }
+}
+
+# GKE Cluster
+resource "google_container_cluster" "cluster" {
+  name               = "my-cluster"
+  location           = "us-central1"
+  initial_node_count = 3
+  master_auth {
+    username = ""
+    password = ""
+    client_certificate_config {
+      issue_client_certificate = false
+    }
+  }
+}
+
+# Container Registry
+resource "google_container_registry" "default" {
+  location = "US"
+}
+#+end_src
+
+** Deploy de la aplicación.
+Esto puede variar ampliamente dependiendo del lenguaje y el marco que elijas usar. Asumamos que estás usando una aplicación de Node.js en un contenedor Docker.
+
+*** Dockerfile
+
+#+begin_src yaml
+FROM node:14
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 8080
+CMD [ "node", "app.js" ]
+#+end_src
+
+Podrías construir y empujar el contenedor a Container Registry de GCP con:
+
+#+begin_src bash
+docker build -t gcr.io/PROJECT_ID/my-app .
+docker push gcr.io/PROJECT_ID/my-app
+#+end_src
+
+Luego, para desplegar el contenedor en el cluster GKE, necesitarías crear un archivo de configuración de Kubernetes y aplicarlo con kubectl apply -f.
+
+yaml
+
+#+begin_src yaml
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-app
+        image: gcr.io/PROJECT_ID/my-app:latest
+        ports:
+        - containerPort: 8080
+#+end_src
+
+
+#+begin_src bash
+kubectl apply -f deployment.yaml
+#+end_src
+
+Por último, recuerda que estos son ejemplos generales y deberías adaptarlos a tus necesidades específicas. Asegúrate de leer la documentación de cada herramienta para entender completamente cómo funciona cada una. Asegúrate también de manejar correctamente las credenciales y los secretos, para mantener tu infraestructura segura. Para el "ISTIO Service Mesh", te recomendaría leer la documentación oficial de Istio para entender cómo implementarlo en un cluster GKE.

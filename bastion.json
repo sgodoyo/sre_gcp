@@ -1,0 +1,20 @@
+# Packer configuration - bastion.json
+{
+  "builders": [
+    {
+      "type": "googlecompute",
+      "project_id": "{{user `gcp_project_id`}}",
+      "source_image_family": "ubuntu-2004-lts",
+      "ssh_username": "packer",
+      "zone": "{{user `gcp_zone`}}",
+      "instance_name": "bastion-temp",
+      "machine_type": "f1-micro"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "ansible",
+      "playbook_file": "./bastion_playbook.yml"
+    }
+  ]
+}
