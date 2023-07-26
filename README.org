@@ -27,14 +27,7 @@ infraestructura.
 Utilizando una cuenta gratuita de GCP realizar la automatización del siguiente
 ejercicio
 
-#+begin_export latex
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.2\textwidth]{diagrama.png}
-\caption{Diagrama de arquitectura GCP}
-\label{fig:diagrama_flujo}
-\end{figure}
-#+end_export
+[[.diagrama.png]]
 
 Utilizando la VPC y redes por defecto de la cuenta realizar los scripts de
 automatización para los siguientes componentes:
@@ -259,5 +252,3 @@ spec:
 #+begin_src bash
 kubectl apply -f deployment.yaml
 #+end_src
-
-Por último, recuerda que estos son ejemplos generales y deberías adaptarlos a tus necesidades específicas. Asegúrate de leer la documentación de cada herramienta para entender completamente cómo funciona cada una. Asegúrate también de manejar correctamente las credenciales y los secretos, para mantener tu infraestructura segura. Para el "ISTIO Service Mesh", te recomendaría leer la documentación oficial de Istio para entender cómo implementarlo en un cluster GKE.
