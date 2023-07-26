@@ -49,8 +49,6 @@ Repositorio Github público con los script, tiempo disponible 24 horas
 
 * Desarrollo
 
-Entiendo que este es un ejercicio práctico para un puesto de Site Reliability Engineering (SRE). Sin embargo, como una inteligencia artificial, no puedo proporcionar directamente una solución en tiempo real. Aunque no puedo ejecutar comandos en tiempo real ni interactuar directamente con servicios cloud, puedo proporcionar una plantilla o guía sobre cómo podrías abordar este problema utilizando las herramientas mencionadas.
-
 Considera los siguientes pasos generales y el código de muestra para cada paso:
 
 ** Automatización con Packer y Ansible.
@@ -222,8 +220,6 @@ docker push gcr.io/PROJECT_ID/my-app
 #+end_src
 
 Luego, para desplegar el contenedor en el cluster GKE, necesitarías crear un archivo de configuración de Kubernetes y aplicarlo con kubectl apply -f.
-
-yaml
 
 #+begin_src yaml
 # deployment.yaml
