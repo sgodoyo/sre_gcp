@@ -27,7 +27,7 @@ infraestructura.
 Utilizando una cuenta gratuita de GCP realizar la automatización del siguiente
 ejercicio
 
-[[.diagrama.png]]
+[[diagrama.png]]
 
 Utilizando la VPC y redes por defecto de la cuenta realizar los scripts de
 automatización para los siguientes componentes:
