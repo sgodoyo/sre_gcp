@@ -47,26 +47,72 @@ Deseable pero no requerido, implementar una malla de servicios ISTIO
 ** Entregable:
 Repositorio Github público con los script, tiempo disponible 24 horas
 
-* Desarrollo
+* Configuración previa
+** DONE Crear una cuenta de Google Cloud Platform:
+  Si aún no tienes una, deberás crear una cuenta en Google Cloud Platform. Google ofrece una prueba gratuita para nuevos usuarios.
+
+** DONE Crear un proyecto:
+  Los recursos de GCP están organizados en proyectos. Desde la consola de GCP, puedes crear un nuevo proyecto en el que trabajar.
+
+** DONE Habilitar las APIs necesarias:
+  Para este ejercicio, es posible que necesites habilitar las APIs de *Compute Engine*, *Kubernetes Engine*, *Cloud SQL* y otras APIs relacionadas. Esto puede hacerse desde la consola de GCP en la sección "APIs & Services > Library".
+
+** DONE Configurar el SDK de Google Cloud:
+  Descarga e instala el SDK de Google Cloud en tu máquina local. Esto te permitirá interactuar con tus recursos de GCP desde la línea de comandos.
+
+** DONE Después de la instalación, autentícate ejecutando =gcloud auth login= y sigue las instrucciones.
+
+** DONE Establece tu proyecto predeterminado con =gcloud config set project PROJECT_ID= reemplazando PROJECT_ID por el ID de tu proyecto.
+
+**  DONE Crear un servicio de cuenta:
+Para interactuar con GCP desde Packer, Ansible, Terraform y Terragrunt, necesitarás autenticarte. La forma recomendada de hacerlo es a través de una cuenta de servicio.
+
+- Desde la consola de GCP, ve a "IAM & Admin > Service Accounts" y crea una nueva cuenta de servicio.
+- Descarga la clave de la cuenta de servicio en formato JSON. (Guarda en un directorio privado y protegido)
+- Establece la variable de entorno GOOGLE_APPLICATION_CREDENTIALS en tu máquina local para que apunte a la ruta del archivo de clave JSON.
+
+#+begin_src bash
+export GOOGLE_APPLICATION_CREDENTIALS="/ruta/al/archivo.json"
+#+end_src
+
+** DONE Configurar permisos:
+Asegúrate de que la cuenta de servicio que has creado tiene los permisos necesarios para crear y administrar los recursos que necesitas. Esto puede incluir roles como "Compute Admin", "Kubernetes Engine Admin", "Cloud SQL Admin", y más, dependiendo de tus necesidades.
+
+* TODO Desarrollo
 
 Considera los siguientes pasos generales y el código de muestra para cada paso:
 
-** Automatización con Packer y Ansible.
+** DONE Automatización con Packer y Ansible.
 Estas herramientas se utilizarán para la creación y configuración de la máquina de Bastion.
 
+*** Install plugins for packer
 
+#+begin_src bash
+packer plugins install github.com/hashicorp/googlecompute
+packer plugins install github.com/hashicorp/ansible
+#+end_src
+
+*** Conocer proyectos IDs, zonas e imágenes disponibles.
+#+begin_src bash
+gcloud projects list
+gcloud compute zones list
+gcloud compute images list
+gcloud compute images list | grep debian
+gcloud compute machine-types list --filter="zone:(us-central1-a)"
+#+end_src
+
+*** Packer configuration - bastion.json
 #+begin_src json
-# Packer configuration - bastion.json
 {
   "builders": [
     {
       "type": "googlecompute",
       "project_id": "{{user `gcp_project_id`}}",
-      "source_image_family": "ubuntu-2004-lts",
+      "source_image_family": "{{user `gcp_image_select`}}",
       "ssh_username": "packer",
       "zone": "{{user `gcp_zone`}}",
       "instance_name": "bastion-temp",
-      "machine_type": "f1-micro"
+      "machine_type": "e2-micro"
     }
   ],
   "provisioners": [
@@ -78,30 +124,66 @@ Estas herramientas se utilizarán para la creación y configuración de la máqu
 }
 #+end_src
 
-
+*** Ansible playbook - bastion_playbook.yml
 #+begin_src yaml
-# Ansible playbook - bastion_playbook.ym
 ---
 - hosts: all
   become: yes
+  vars:
+    packages:
+      - emacs
+      - git
   tasks:
     - name: Update all packages
       apt:
-        upgrade: yes
+        upgrade: dist
         update_cache: yes
         cache_valid_time: 3600
 
     - name: Install necessary packages
       apt:
-        name: ['package1', 'package2', 'package3']
+        name: "{{ packages }}"
         state: present
+        update_cache: yes
 #+end_src
 
-Para construir la imagen, ejecutaría el siguiente comando:
+*** Para construir la imagen:
 #+begin_src bash
 packer build -var 'gcp_project_id=YOUR_PROJECT_ID' -var 'gcp_zone=YOUR_ZONE' bastion.json
 #+end_src
 
+**** Backtrace
+#+begin_src bash
+packer build -var 'gcp_project_id=sre-gcp-394115' -var 'gcp_image_select=debian-12' -var 'gcp_zone=us-central1-c' bastion.json
+
+googlecompute: output will be in this color.
+
+==> googlecompute: Checking image does not exist...
+==> googlecompute: Creating temporary RSA SSH key for instance...
+==> googlecompute: no persistent disk to create
+==> googlecompute: Using image: debian-12-bookworm-v20230724
+==> googlecompute: Creating instance...
+    googlecompute: Loading zone: us-central1-c
+    googlecompute: Loading machine type: e2-micro
+    googlecompute: Requesting instance creation...
+    googlecompute: Waiting for creation operation to complete...
+    googlecompute: Instance has been created!
+==> googlecompute: Waiting for the instance to become running...
+    googlecompute: IP: 34.173.112.77
+==> googlecompute: Using SSH communicator to connect: 34.173.112.77
+==> googlecompute: Waiting for SSH to become available...
+==> googlecompute: Connected to SSH!
+==> googlecompute: Provisioning with Ansible...
+    googlecompute: Setting up proxy adapter for Ansible....
+==> googlecompute: Executing Ansible: ansible-playbook -e packer_build_name="googlecompute" -e packer_builder_type=googlecompute --ssh-extra-args '-o IdentitiesOnly=yes' -e ansible_ssh_private_key_file=/tmp/ansible-key2559459024 -i /tmp/packer-provisioner-ansible2455992552 /home/shackleton/Proyectos/SRE_GCP/sre_gcp/bastion_playbook.yml
+    googlecompute:
+    googlecompute: PLAY [all] *********************************************************************
+    googlecompute:
+    googlecompute: TASK [Gathering Facts] *********************************************************
+    googlecompute: ok: [default]
+    googlecompute:
+    googlecompute: TASK [Update all packages] *****************************************************
+#+end_src
 ** Automatización con Terraform.
 Esto se utilizará para configurar los otros componentes de la infraestructura. Aquí hay ejemplos de cómo podrías configurar el Cloud Load Balancer, Cloud DNS, GKE Cluster, Container Registry y Cloud SQL.
 

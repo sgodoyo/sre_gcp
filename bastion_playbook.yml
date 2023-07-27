@@ -1,15 +1,19 @@
-# Ansible playbook - bastion_playbook.yml
 ---
 - hosts: all
   become: yes
+  vars:
+    packages:
+      - emacs
+      - git
   tasks:
     - name: Update all packages
       apt:
-        upgrade: yes
+        upgrade: dist
         update_cache: yes
         cache_valid_time: 3600
 
     - name: Install necessary packages
       apt:
-        name: ['package1', 'package2', 'package3']
+        name: "{{ packages }}"
         state: present
+        update_cache: yes
