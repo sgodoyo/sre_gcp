@@ -80,7 +80,7 @@ Estas herramientas se utilizarán para la creación y configuración de la máqu
 
 
 #+begin_src yaml
-# Ansible playbook - bastion_playbook.yml
+# Ansible playbook - bastion_playbook.ym
 ---
 - hosts: all
   become: yes
