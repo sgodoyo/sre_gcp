@@ -1,8 +1,8 @@
 # main.tf
 provider "google" {
-  project = "YOUR_PROJECT_ID"
-  region  = "YOUR_REGION"
-  zone    = "YOUR_ZONE"
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
 }
 
 # VPC Network
@@ -53,12 +53,12 @@ resource "google_compute_global_forwarding_rule" "http" {
   port_range = "80"
 }
 
-# Cloud DNS
-resource "google_dns_managed_zone" "dns_zone" {
-  name        = "dns-zone"
-  dns_name    = "mydomain.com."
-  description = "Managed DNS zone for the domain"
-}
+# # Cloud DNS
+# resource "google_dns_managed_zone" "dns_zone" {
+#   name        = "dns-zone"
+#   dns_name    = "mydomain.com."
+#   description = "Managed DNS zone for the domain"
+# }
 
 # Cloud SQL
 resource "google_sql_database_instance" "master" {
@@ -71,12 +71,12 @@ resource "google_sql_database_instance" "master" {
 
 # GKE Cluster
 resource "google_container_cluster" "cluster" {
-  name               = "my-cluster"
-  location           = "us-central1"
+  name     = "my-cluster"
+  location = "us-central1"
+
   initial_node_count = 3
+
   master_auth {
-    username = ""
-    password = ""
     client_certificate_config {
       issue_client_certificate = false
     }
