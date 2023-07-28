@@ -6,8 +6,8 @@ provider "google" {
 
 # GKE Cluster
 resource "google_container_cluster" "small_cluster" {
-  name                     = "small-cluster"
-  location                 = var.region
+  name                     = "small-cluster-k8s"
+  location                 = "us-central1-f"
   initial_node_count       = 1
   remove_default_node_pool = true
 
@@ -17,24 +17,24 @@ resource "google_container_cluster" "small_cluster" {
     }
   }
 
-  master_authorized_networks_config {
-    cidr_blocks {
-      cidr_block   = "0.0.0.0/0"
-      display_name = "Any IP"
-    }
-  }
+  # master_authorized_networks_config {
+  #   cidr_blocks {
+  #     cidr_block   = "0.0.0.0/0"
+  #     display_name = "Any IP"
+  #   }
+  # }
 }
 
 # GKE Node Pool
 resource "google_container_node_pool" "primary" {
-  name       = "small-pool"
-  location   = var.region
+  name       = "small-pool-k8s"
+  location   = "us-central1-f"
   cluster    = google_container_cluster.small_cluster.name
   node_count = 1
 
   node_config {
     preemptible  = true
-    machine_type = "f1-micro"
+    machine_type = "e2-small"
     disk_size_gb = 10
 
     oauth_scopes = [
@@ -97,7 +97,7 @@ resource "google_compute_target_pool" "default" {
 # Bastion Host
 resource "google_compute_instance" "bastion_host" {
   name         = "bastion"
-  machine_type = "f1-micro"
+  machine_type = "e2-medium"
   zone         = var.zone
 
   boot_disk {
