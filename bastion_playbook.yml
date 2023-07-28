@@ -17,3 +17,12 @@
         name: "{{ packages }}"
         state: present
         update_cache: yes
+
+    - name: Download kubectl
+      get_url:
+        url: https://storage.googleapis.com/kubernetes-release/release/v1.22.0/bin/linux/amd64/kubectl
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+
+    - name: Verify kubectl
+      command: kubectl version --client
