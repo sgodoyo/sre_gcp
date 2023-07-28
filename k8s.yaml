@@ -1,0 +1,36 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-fastapi-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: model-fastapi-deployment
+  template:
+    metadata:
+      labels:
+        app: model-fastapi-deployment
+    spec:
+      containers:
+        - name: model-fastapi
+          image: sgodoyo/challenge-latam:latest
+          imagePullPolicy: Always
+          ports:
+            - name: fastapi-port
+              containerPort: 8000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-fastapi-service
+spec:
+  selector:
+    app: model-fastapi-deployment
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: fastapi-port

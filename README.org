@@ -1,6 +1,6 @@
 :PROPERTIES:
 :GPTEL_MODEL: gpt-3.5-turbo
-:GPTEL_BOUNDS: nil
+:GPTEL_BOUNDS: ((40481 . 41517) (41700 . 42887))
 :END:
 #+TITLE: Ejercicio práctico para el puesto de SRE
 #+SUBTITLE: 
@@ -214,7 +214,7 @@ Build 'googlecompute' finished after 23 minutes 34 seconds.
 A continuación, Packer crea la imagen a partir del estado del disco de la instancia justo después de que se haya ejecutado el provisionador. Finalmente, Packer elimina el disco temporal.
 
 El resultado es una nueva imagen llamada packer-1690487605 que puedes usar para lanzar nuevas instancias con la configuración definida en tu playbook de Ansible.
-** TODO Automatización con Terraform.
+** DONE Automatización con Terraform.
 Esto se utilizará para configurar los otros componentes de la infraestructura. Configurar el Cloud Load Balancer, Cloud DNS, GKE Cluster, Container Registry y Cloud SQL.
 *** main.tf
 #+begin_src terraform
@@ -1087,24 +1087,87 @@ Plan: 11 to add, 0 to change, 0 to destroy.
 Note: You didn't use the -out option to save this plan, so Terraform can't guarantee to take exactly these actions if you run "terraform apply" now.
 #+end_src
 
-
-** Deploy de la aplicación.
+*** terraform apply
+#+begin_src bash
+terraform apply --auto-approve
+#+end_src
+** TODO Deploy de la aplicación.
 Esto puede variar ampliamente dependiendo del lenguaje y el marco que elijas usar. Asumamos que estás usando una aplicación de Node.js en un contenedor Docker.
 
 *** Dockerfile
 
-#+begin_src yaml
-FROM node:14
-WORKDIR /usr/src/app
-COPY package*.json ./
-RUN npm install
+#+begin_src dockerfile
+FROM python:3.9
+
+MAINTAINER Sebastian Godoy Olivares <shackleton@riseup.net>
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+COPY pickle_model.pkl .
+
+RUN pip install --upgrade pip
+
 COPY . .
-EXPOSE 8080
-CMD [ "node", "app.js" ]
+
+RUN pip install scikit-learn
+
+RUN pip install -r requirements.txt
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 #+end_src
 
-Podrías construir y empujar el contenedor a Container Registry de GCP con:
+El Dockerfile proporcionado es utilizado para construir una imagen de Docker para una aplicación Python.
 
+1. Se utiliza la imagen base =python:3.9=.
+2. Se establecen variables de entorno =PYTHONDONTWRITEBYTECODE= y =PYTHONUNBUFFERED= para garantizar que Python no genere archivos de bytecode y que la salida se muestre de inmediato.
+3. Se establece el directorio de trabajo en =/app=.
+4. Se copia el archivo =requirements.txt= al directorio de trabajo.
+5. Se copia el archivo =pickle_model.pkl= al directorio de trabajo.
+6. Se actualiza pip a la última versión.
+7. Se copia todo el contenido actual al directorio de trabajo. Esto incluye el código de la aplicación.
+8. Se instala =scikit-learn=.
+9. Se instalan las dependencias especificadas en =requirements.txt=.
+10. Se expone el puerto =8000= en el contenedor.
+11. Se configura el comando a ejecutar cuando se inicie un contenedor basado en esta imagen. En este caso, se utiliza Uvicorn para ejecutar la aplicación principal (=main:app=) en el host =0.0.0.0= y en el puerto =8000=.
+
+
+*** Build and Push docker image
+Podrías construir y empujar el contenedor a Container Registry de GCP con:
+***** Registrar una imagen de docker en container registry de Google Cloud
+1. Asegúrate de tener la imagen Docker compilada en tu entorno de desarrollo.
+
+2. Inicia sesión en tu cuenta de Google Cloud Platform (GCP) utilizando el siguiente comando:
+   #+begin_src 
+   gcloud auth login
+   #+end_src
+
+3. Establece tu proyecto de GCP como proyecto actual utilizando el siguiente comando:
+   #+begin_src 
+   gcloud config set project <nombre_del_proyecto>
+   #+end_src
+
+4. Autentica Docker para usar el registro de contenedores de Google Cloud utilizando el siguiente comando:
+   #+begin_src 
+   gcloud auth configure-docker
+   #+end_src
+
+5. Etiqueta tu imagen Docker para que sea compatible con el registro de contenedores de Google Cloud. Puedes hacerlo utilizando el siguiente comando:
+   #+begin_src 
+   docker tag <nombre_de_la_imagen>:<etiqueta> gcr.io/<nombre_del_proyecto>/<nombre_de_la_imagen>:<etiqueta>
+   #+end_src
+   Reemplaza =<nombre_de_la_imagen>= con el nombre de tu imagen y =<etiqueta>= con la etiqueta que desees usar.
+
+6. Finalmente, haz push de tu imagen Docker al registro de contenedores de Google Cloud utilizando el siguiente comando:
+   #+begin_src 
+   docker push gcr.io/<nombre_del_proyecto>/<nombre_de_la_imagen>:<etiqueta>
+   #+end_src
 #+begin_src bash
 docker build -t gcr.io/PROJECT_ID/my-app .
 docker push gcr.io/PROJECT_ID/my-app
