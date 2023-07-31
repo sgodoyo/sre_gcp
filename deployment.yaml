@@ -1,20 +1,36 @@
-# deployment.yaml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-app
+  name: model-fastapi-deployment
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: my-app
+      app: model-fastapi-deployment
   template:
     metadata:
       labels:
-        app: my-app
+        app: model-fastapi-deployment
     spec:
       containers:
-      - name: my-app
-        image: gcr.io/PROJECT_ID/my-app:latest
-        ports:
-        - containerPort: 8080
+        - name: model-fastapi
+          image: gcr.io/sre-gcp-394115/fastapi-app:latest"
+          imagePullPolicy: Always
+          ports:
+            - name: fastapi-port
+              containerPort: 8000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-fastapi-service
+spec:
+  selector:
+    app: model-fastapi-deployment
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: fastapi-port

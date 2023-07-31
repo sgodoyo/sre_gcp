@@ -4,6 +4,8 @@ provider "google" {
   zone    = var.zone
 }
 
+data "google_client_config" "default" {}
+
 # GKE Cluster
 resource "google_container_cluster" "small_cluster" {
   name                     = "small-cluster-k8s"
@@ -51,6 +53,80 @@ resource "google_container_node_pool" "primary" {
   management {
     auto_repair  = true
     auto_upgrade = true
+  }
+}
+# Get Cluster data after it's created
+data "google_container_cluster" "cluster" {
+  name     = google_container_cluster.small_cluster.name
+  location = "us-central1-f"
+  depends_on = [
+    google_container_cluster.small_cluster
+  ]
+}
+
+# Kubernetes provider configuration using the cluster data
+provider "kubernetes" {
+#  host                   = data.google_container_cluster.cluster.endpoint
+  host                   = "https://${google_container_cluster.small_cluster.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(data.google_container_cluster.cluster.master_auth.0.cluster_ca_certificate)
+}
+
+# docker image deploy on GKE
+resource "kubernetes_deployment" "app" {
+  metadata {
+    name = "fastapi-app-deployment"
+    labels = {
+      app = "fastapi-app"
+    }
+  }
+
+  spec {
+    replicas = 2
+
+    selector {
+      match_labels = {
+        app = "fastapi-app"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "fastapi-app"
+        }
+      }
+
+      spec {
+        container {
+          image = "gcr.io/${var.project_id}/fastapi-app:latest" // reemplaza con la ruta a tu imagen
+          name  = "fastapi-app"
+
+          port {
+            container_port = 8000 // reemplaza con el puerto que tu app escucha
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "app" {
+  metadata {
+    name = "fastapi-app-service"
+  }
+
+  spec {
+    selector = {
+      app = kubernetes_deployment.app.metadata[0].labels.app
+    }
+
+    port {
+      port        = 80
+      target_port = 8000 // este debe ser el mismo puerto que definiste en tu Deployment
+    }
+
+    type = "LoadBalancer"
   }
 }
 
